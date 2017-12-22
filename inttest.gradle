@@ -1,13 +1,3 @@
-idea {
-    module {
-        // add the integration tests to the idea test sources for convenience
-        // this makes idea different to command line config as on the command line
-        // where there are entirely separate source sets for unit and integration tests
-        testSourceDirs += file('src/integration-test/java')
-        testSourceDirs += file('src/integration-test/resources')
-    }
-}
-
 sourceSets {
     integrationTest {
         java {

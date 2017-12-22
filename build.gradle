@@ -5,13 +5,11 @@ buildscript {
     dependencies {
         classpath 'com.github.spullara.mustache.java:compiler:0.8.10',
                 'org.yaml:snakeyaml:1.10',
-                'uk.gov.ida:ida-gradle:1.1.0-20',
                 'com.google.guava:guava:14.0.1',
                 'com.github.ben-manes:gradle-versions-plugin:0.17.0'
     }
 }
 
-apply from: 'idea.gradle'
 apply plugin: 'java'
 apply plugin: 'com.github.ben-manes.versions'
 
@@ -38,7 +36,6 @@ def dependencyVersions = [
 
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'idaJar'
 
     group = "uk.gov.ida"
     version = "0.1.$version"
