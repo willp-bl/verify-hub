@@ -15,9 +15,16 @@ dependencies {
             configurations.dropwizard_infinispan
 }
 
-apply plugin: 'application'
-ext.mainclass = 'uk.gov.ida.hub.policy.PolicyApplication'
-mainClassName = ext.mainclass
+jar {
+    archiveName = baseName+".jar"
+    destinationDir = file(new File("$buildDir/output"))
+    manifest {
+        attributes(
+                "Main-Class": 'uk.gov.ida.hub.policy.PolicyApplication',
+                "Class-Path": configurations.compile.collect { "lib/"+it.getName() }.join(' ')
+        )
+    }
+}
 
 task copyToLib(dependsOn: jar, type: Copy) {
     into "$buildDir/output/lib"
