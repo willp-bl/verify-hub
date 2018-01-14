@@ -38,7 +38,7 @@ subprojects {
     apply plugin: 'java'
 
     group = "uk.gov.ida"
-    version = "0.1.$version"
+    version = "${System.env.BUILD_NUMBER ?: 'SNAPSHOT'}"
 
     repositories {
         maven { url 'https://artifactory.ida.digital.cabinet-office.gov.uk/artifactory/whitelisted-repos' }
