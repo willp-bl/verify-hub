@@ -3,6 +3,7 @@ package uk.gov.ida.hub.policy.domain.state.serialization;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.gov.ida.hub.policy.domain.SessionId;
 import uk.gov.ida.hub.policy.domain.state.AuthnFailedErrorState;
@@ -78,6 +79,7 @@ import static uk.gov.ida.hub.policy.domain.state.serialization.SerializationHelp
  * @see <a href="https://docs.oracle.com/javase/8/docs/api/java/io/Serializable.html">The javadoc for Serializable</a>
  * @see <a href="https://stackoverflow.com/a/285809/1344760">Stackoverflow explanation of serialVersionUID</a>
  */
+@Ignore
 public class DeserializationTest {
 
     private static final SessionId SESSION_ID = new SessionId("some-session-id");
