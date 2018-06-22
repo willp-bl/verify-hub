@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.opensaml.core.xml.io.MarshallingException;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.xmlsec.signature.support.SignatureException;
@@ -56,6 +57,7 @@ import static uk.gov.ida.saml.core.test.TestEntityIds.TEST_RP;
 import static uk.gov.ida.saml.core.test.TestEntityIds.TEST_RP_MS;
 import static uk.gov.ida.saml.core.test.builders.ResponseBuilder.aResponse;
 
+@Ignore
 public class MatchingServiceRequestSenderTest {
     
     public static final Credential msaSigningCredential =  new TestCredentialFactory(TEST_RP_MS_PUBLIC_SIGNING_CERT, TEST_RP_MS_PRIVATE_SIGNING_KEY).getSigningCredential();
