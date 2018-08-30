@@ -37,6 +37,7 @@ import uk.gov.ida.hub.samlengine.factories.EidasValidatorFactory;
 import uk.gov.ida.hub.samlengine.factories.OutboundResponseFromHubToResponseTransformerFactory;
 import uk.gov.ida.hub.samlengine.locators.AssignableEntityToEncryptForLocator;
 import uk.gov.ida.hub.samlengine.logging.IdpAssertionMetricsCollector;
+import uk.gov.ida.hub.samlengine.metadata.SigningCertFromMetadataExtractor;
 import uk.gov.ida.hub.samlengine.proxy.CountrySingleSignOnServiceHelper;
 import uk.gov.ida.hub.samlengine.proxy.IdpSingleSignOnServiceHelper;
 import uk.gov.ida.hub.samlengine.proxy.TransactionsConfigProxy;
@@ -97,7 +98,13 @@ import uk.gov.ida.saml.hub.transformers.inbound.SamlStatusToIdpIdaStatusMappings
 import uk.gov.ida.saml.hub.transformers.inbound.providers.DecoratedSamlResponseToIdaResponseIssuedByIdpTransformer;
 import uk.gov.ida.saml.hub.transformers.inbound.providers.DecoratedSamlResponseToInboundHealthCheckResponseFromMatchingServiceTransformer;
 import uk.gov.ida.saml.hub.transformers.inbound.providers.DecoratedSamlResponseToInboundResponseFromMatchingServiceTransformer;
-import uk.gov.ida.saml.hub.transformers.outbound.*;
+import uk.gov.ida.saml.hub.transformers.outbound.AssertionFromIdpToAssertionTransformer;
+import uk.gov.ida.saml.hub.transformers.outbound.OutboundLegacyResponseFromHubToStringFunction;
+import uk.gov.ida.saml.hub.transformers.outbound.OutboundLegacyResponseFromHubToStringFunctionSHA256;
+import uk.gov.ida.saml.hub.transformers.outbound.OutboundSamlProfileResponseFromHubToStringFunction;
+import uk.gov.ida.saml.hub.transformers.outbound.OutboundSamlProfileResponseFromHubToStringFunctionSHA256;
+import uk.gov.ida.saml.hub.transformers.outbound.SimpleProfileOutboundResponseFromHubToSamlResponseTransformer;
+import uk.gov.ida.saml.hub.transformers.outbound.SimpleProfileTransactionIdaStatusMarshaller;
 import uk.gov.ida.saml.hub.transformers.outbound.providers.ResponseToUnsignedStringTransformer;
 import uk.gov.ida.saml.hub.transformers.outbound.providers.SimpleProfileOutboundResponseFromHubToResponseTransformerProvider;
 import uk.gov.ida.saml.hub.validators.authnrequest.AuthnRequestIdKey;
@@ -136,6 +143,7 @@ import java.security.KeyException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Timer;
@@ -646,9 +654,19 @@ public class SamlEngineModule extends AbstractModule {
     }
 
     @Provides
+    @Singleton
+    private IdaKeyStoreCredentialRetriever getIdaKeyStoreCredentialRetriever(SigningCertFromMetadataExtractor signingCertFromMetadataExtractor, IdaKeyStore keyStore) {
+        return new IdaKeyStoreCredentialRetriever(keyStore) {
+            @Override
+            public X509Certificate getSigningCertificate() {
+                return signingCertFromMetadataExtractor.getSigningCertForCurrentSigningKey(keyStore.getSigningKeyPair().getPublic());
+            }
+        };
+    }
+
+    @Provides
     @Named("EidasAssertionDecrypter")
-    private AssertionDecrypter getEidasAssertionDecrypter(IdaKeyStore keyStore) {
-        IdaKeyStoreCredentialRetriever idaKeyStoreCredentialRetriever = new IdaKeyStoreCredentialRetriever(keyStore);
+    private AssertionDecrypter getEidasAssertionDecrypter(IdaKeyStoreCredentialRetriever idaKeyStoreCredentialRetriever) {
         Decrypter decrypter = new DecrypterFactory().createDecrypter(idaKeyStoreCredentialRetriever.getDecryptingCredentials());
         ImmutableSet<String> contentEncryptionAlgorithms = ImmutableSet.of(
                 EncryptionConstants.ALGO_ID_BLOCKCIPHER_AES128_GCM,
