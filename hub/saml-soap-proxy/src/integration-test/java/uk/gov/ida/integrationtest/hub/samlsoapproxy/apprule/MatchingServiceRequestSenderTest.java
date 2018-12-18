@@ -96,6 +96,8 @@ public class MatchingServiceRequestSenderTest {
         client = new JerseyClientBuilder(samlSoapProxyAppRule.getEnvironment()).using(jerseyClientConfiguration).build(MatchingServiceRequestSenderTest.class.getSimpleName());
         eventSinkStubRule.setupStubForLogging();
         configStub.setupStubForCertificates(TEST_RP_MS);
+        configStub.setUpStubForMatchingServiceDetails(TEST_RP_MS);
+
         String soap = createMsaResponse();
         final String attibute_query_resource = "/attribute-query-request";
         RequestAndResponse requestAndResponse = ExpectedRequestBuilder.expectRequest().withPath(attibute_query_resource).andWillRespondWith().withStatus(200).withBody(soap).withContentType(MediaType.TEXT_XML_TYPE.toString()).build();

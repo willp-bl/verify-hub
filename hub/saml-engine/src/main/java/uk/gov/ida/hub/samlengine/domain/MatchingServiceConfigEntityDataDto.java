@@ -1,4 +1,4 @@
-package uk.gov.ida.hub.config.dto;
+package uk.gov.ida.hub.samlengine.domain;
 
 import java.net.URI;
 
