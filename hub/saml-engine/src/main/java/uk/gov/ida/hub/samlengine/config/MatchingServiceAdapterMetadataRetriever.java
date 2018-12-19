@@ -3,12 +3,14 @@ package uk.gov.ida.hub.samlengine.config;
 import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
 import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import org.apache.log4j.Logger;
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.criterion.EntityRoleCriterion;
 import org.opensaml.saml.criterion.ProtocolCriterion;
-import org.opensaml.saml.ext.saml2mdquery.AttributeQueryDescriptorType;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
+import org.opensaml.saml.saml2.metadata.AttributeAuthorityDescriptor;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
 import org.opensaml.saml.security.impl.MetadataCredentialResolver;
 import org.opensaml.security.credential.Credential;
 import org.opensaml.security.credential.UsageType;
@@ -37,6 +39,8 @@ import static java.text.MessageFormat.format;
 
 public class MatchingServiceAdapterMetadataRetriever {
 
+    private static final Logger LOG = Logger.getLogger(MatchingServiceAdapterMetadataRetriever.class);
+
     private static final boolean VALIDATE_METADATA_SIGNATURES = true;
 
     private final CertificateChainValidator certificateChainValidator;
@@ -53,15 +57,44 @@ public class MatchingServiceAdapterMetadataRetriever {
         this.dropwizardMetadataResolverFactory = dropwizardMetadataResolverFactory;
     }
 
-    public List<PublicKey> getPublicSigningKeysForMSA(String entityId) {
-        final MetadataCredentialResolver metadataResolverForMSA = getMetadataCredentialResolverForMSA(entityId);
+    public List<PublicKey> getPublicSigningKeysForRP(String entityId) {
+        final MetadataCredentialResolver metadataResolverForRP = getMetadataCredentialResolver(entityId);
 
         List<PublicKey> publicKeys = new ArrayList<>();
         final CriteriaSet criteriaSet = new CriteriaSet(
                 new EntityIdCriterion(entityId),
                 new UsageCriterion(UsageType.SIGNING),
                 new ProtocolCriterion(SAMLConstants.SAML20P_NS),
-                new EntityRoleCriterion(AttributeQueryDescriptorType.DEFAULT_ELEMENT_NAME)
+                new EntityRoleCriterion(SPSSODescriptor.DEFAULT_ELEMENT_NAME)
+        );
+        try {
+            Credential credential = metadataResolverForRP.resolveSingle(criteriaSet);
+            if (credential instanceof X509Credential) {
+                // important that this validation is done because it's signed by the MSA and we've not checked it before
+
+                // note validate() throws a runtime exception if it's not valid
+                validate(((X509Credential) credential).getEntityCertificate(), msTrustStore);
+                publicKeys.add(credential.getPublicKey());
+            }
+        } catch (ResolverException e) {
+            throw new SigningKeyExtractionException("Unable to resolve metadata.", e);
+        }
+        LOG.info(format("found {0} signing certs for {1}", publicKeys.size(), entityId));
+        if(publicKeys.size()==0) {
+            throw new SigningKeyExtractionException("did not find any signing certs in metadata");
+        }
+        return publicKeys;
+    }
+
+    public List<PublicKey> getPublicSigningKeysForMSA(String entityId) {
+        final MetadataCredentialResolver metadataResolverForMSA = getMetadataCredentialResolver(entityId);
+
+        List<PublicKey> publicKeys = new ArrayList<>();
+        final CriteriaSet criteriaSet = new CriteriaSet(
+                new EntityIdCriterion(entityId),
+                new UsageCriterion(UsageType.SIGNING),
+                new ProtocolCriterion(SAMLConstants.SAML20P_NS),
+                new EntityRoleCriterion(AttributeAuthorityDescriptor.DEFAULT_ELEMENT_NAME)
         );
         try {
             Credential credential = metadataResolverForMSA.resolveSingle(criteriaSet);
@@ -75,18 +108,22 @@ public class MatchingServiceAdapterMetadataRetriever {
         } catch (ResolverException e) {
             throw new SigningKeyExtractionException("Unable to resolve metadata.", e);
         }
+        LOG.info(format("found {0} signing certs for {1}", publicKeys.size(), entityId));
+        if(publicKeys.size()==0) {
+            throw new SigningKeyExtractionException("did not find any signing certs in metadata");
+        }
         return publicKeys;
     }
 
     public PublicKey getPublicEncryptionKeyForMSA(String entityId) {
-        final MetadataCredentialResolver metadataResolverForMSA = getMetadataCredentialResolverForMSA(entityId);
+        final MetadataCredentialResolver metadataResolverForMSA = getMetadataCredentialResolver(entityId);
 
         List<PublicKey> publicKeys = new ArrayList<>();
         final CriteriaSet criteriaSet = new CriteriaSet(
                 new EntityIdCriterion(entityId),
                 new UsageCriterion(UsageType.ENCRYPTION),
                 new ProtocolCriterion(SAMLConstants.SAML20P_NS),
-                new EntityRoleCriterion(AttributeQueryDescriptorType.DEFAULT_ELEMENT_NAME)
+                new EntityRoleCriterion(AttributeAuthorityDescriptor.DEFAULT_ELEMENT_NAME)
         );
         try {
             Credential credential = metadataResolverForMSA.resolveSingle(criteriaSet);
@@ -100,13 +137,40 @@ public class MatchingServiceAdapterMetadataRetriever {
         } catch (ResolverException e) {
             throw new EncryptionKeyExtractionException("Unable to resolve metadata.", e);
         }
-        // this could possibly be empty at this point
-        return publicKeys.get(0);
+        LOG.info(format("found {0} encryption certs for {1}", publicKeys.size(), entityId));
+        return publicKeys.stream().findFirst().orElseThrow(EncryptionKeyExtractionException::noKeyFound);
     }
 
-    private MetadataCredentialResolver getMetadataCredentialResolverForMSA(String entityId) {
+    public PublicKey getPublicEncryptionKeyForRP(String entityId) {
+        final MetadataCredentialResolver metadataResolverForRP = getMetadataCredentialResolver(entityId);
+
+        List<PublicKey> publicKeys = new ArrayList<>();
+        final CriteriaSet criteriaSet = new CriteriaSet(
+                new EntityIdCriterion(entityId),
+                new UsageCriterion(UsageType.ENCRYPTION),
+                new ProtocolCriterion(SAMLConstants.SAML20P_NS),
+                new EntityRoleCriterion(SPSSODescriptor.DEFAULT_ELEMENT_NAME)
+        );
+        try {
+            Credential credential = metadataResolverForRP.resolveSingle(criteriaSet);
+            if (credential instanceof X509Credential) {
+                // important that this validation is done because it's signed by the MSA and we've not checked it before
+
+                // note validate() throws a runtime exception if it's not valid
+                validate(((X509Credential) credential).getEntityCertificate(), msTrustStore);
+                publicKeys.add(credential.getPublicKey());
+            }
+        } catch (ResolverException e) {
+            throw new EncryptionKeyExtractionException("Unable to resolve metadata.", e);
+        }
+        LOG.info(format("found {0} encryption certs for {1}", publicKeys.size(), entityId));
+        return publicKeys.stream().findFirst().orElseThrow(EncryptionKeyExtractionException::noKeyFound);
+    }
+
+    private MetadataCredentialResolver getMetadataCredentialResolver(String entityId) {
         resolvers.computeIfAbsent(entityId, f -> {
             try {
+                LOG.info(format("creating metadata resolver for {0}", entityId));
                 MetadataResolver metadataResolver = dropwizardMetadataResolverFactory
                         .createMetadataResolverWithClient(MSAMetadataResolverConfigurationBuilder.aConfig()
                                         .withMsaEntityId(entityId)
@@ -122,6 +186,7 @@ public class MatchingServiceAdapterMetadataRetriever {
                 throw new CouldNotGetMSACertsException(e);
             }
         });
+        LOG.info(format("using metadata resolver for {0}", entityId));
         return resolvers.get(entityId);
     }
 
@@ -140,5 +205,4 @@ public class MatchingServiceAdapterMetadataRetriever {
         }
         return "Unable to get DN";
     }
-
 }

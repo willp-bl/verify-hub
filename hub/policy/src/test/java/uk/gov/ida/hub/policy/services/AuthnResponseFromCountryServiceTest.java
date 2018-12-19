@@ -109,7 +109,7 @@ public class AuthnResponseFromCountryServiceTest {
         TEST_RP,
         true,
         IS_ONBOARDING,
-        URI.create("user-account-creation-uri"));
+            false, URI.create("user-account-creation-uri"));
 
     private AuthnResponseFromCountryService service;
 

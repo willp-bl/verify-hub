@@ -50,6 +50,7 @@ import static uk.gov.ida.saml.core.test.TestCertificateStrings.TEST_RP_MS_PUBLIC
 import static uk.gov.ida.saml.core.test.TestCertificateStrings.TEST_RP_PRIVATE_SIGNING_KEY;
 import static uk.gov.ida.saml.core.test.TestCertificateStrings.TEST_RP_PUBLIC_SIGNING_CERT;
 import static uk.gov.ida.saml.core.test.TestEntityIds.HUB_ENTITY_ID;
+import static uk.gov.ida.saml.core.test.TestEntityIds.TEST_RP;
 import static uk.gov.ida.saml.core.test.TestEntityIds.TEST_RP_MS;
 import static uk.gov.ida.saml.core.test.builders.AssertionBuilder.anAssertion;
 import static uk.gov.ida.saml.core.test.builders.AuthnStatementBuilder.anAuthnStatement;
@@ -91,6 +92,7 @@ public class MatchingServiceResponseTranslatorResourceTest {
     public void beforeEach() throws Exception {
         configStub.setupCertificatesForEntity(TEST_RP_MS, TEST_RP_MS_PUBLIC_SIGNING_CERT, TEST_RP_MS_PUBLIC_ENCRYPTION_CERT);
         configStub.setUpStubForMatchingServiceDetails(TEST_RP_MS);
+        configStub.setUpStubForRPMetadataEnabled(TEST_RP_MS);
     }
 
     @After

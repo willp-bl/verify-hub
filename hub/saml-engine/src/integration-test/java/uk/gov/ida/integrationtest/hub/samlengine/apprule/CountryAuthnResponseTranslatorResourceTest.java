@@ -63,6 +63,7 @@ public class CountryAuthnResponseTranslatorResourceTest {
         authnResponseFactory = AuthnResponseFactory.anAuthnResponseFactory();
         configStubRule.setupCertificatesForEntity(TEST_RP_MS);
         configStubRule.setUpStubForMatchingServiceDetails(TEST_RP_MS);
+        configStubRule.setUpStubForRPMetadataEnabled(TEST_RP_MS);
     }
 
     @BeforeClass

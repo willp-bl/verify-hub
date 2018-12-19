@@ -172,6 +172,14 @@ public class TransactionsResource {
         return configData.getShouldSignWithSHA1();
     }
 
+    @GET
+    @Path(Urls.ConfigUrls.METADATA_LOCATION_PATH)
+    @Timed
+    public boolean getMetadataLocation(@PathParam(Urls.SharedUrls.ENTITY_ID_PARAM) String entityId) {
+        final TransactionConfigEntityData configData = getTransactionConfigData(entityId);
+        return configData.getMetadataEnabled();
+    }
+
     private TransactionConfigEntityData getTransactionConfigData(String entityId) {
         final Optional<TransactionConfigEntityData> configData = transactionConfigEntityDataRepository.getData(entityId);
         if (!configData.isPresent()) {
